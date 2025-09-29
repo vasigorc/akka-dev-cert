@@ -6,19 +6,15 @@
     <artifactId>akka-javasdk-parent</artifactId>
     <version>3.3.0</version>
   </parent>
-  
   <groupId>io.example</groupId>
   <artifactId>akka-dev-cert</artifactId>
   <version>v.0.0.1</version>
   <packaging>jar</packaging>
-
   <name>akka-dev-cert-solution</name>
   <properties>
 
   </properties>
-  
   <build>
-
     <plugins>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
@@ -41,15 +37,15 @@
         </executions>
       </plugin>
     </plugins>
-    </build>
+  </build>
   <dependencies>
     <!-- Your dependencies go here -->
   </dependencies>
   <repositories>
     <repository>
-        <id>akka-secure</id>
-        <name>Akka Secure</name>
-        <url>https://repo.akka.io/secure</url>
+      <id>akka-secure</id>
+      <name>Akka Secure</name>
+      <url>https://repo.akka.io/secure</url>
     </repository>
   </repositories>
 </project>
