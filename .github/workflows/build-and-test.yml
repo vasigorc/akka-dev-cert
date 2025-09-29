@@ -10,16 +10,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: "21"
-          distribution: "temurin"
-          cache: maven
 
       - name: Configure Maven settings for Akka Secure
         env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
         run: |
           mkdir -p ~/.m2
@@ -34,12 +27,20 @@ jobs:
               </profile>
             </profiles>
             <activeProfiles>
-                <activeProfile>akka</activeProfile>
+              <activeProfile>akka</activeProfile>
             </activeProfiles>
           </settings>
           EOF
 
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
       - name: Make mvnw executable
         run: chmod +x mvnw
+
       - name: Build, Test, and Verify
         run: ./mvnw verify
