@@ -147,10 +147,32 @@ public class FlightEndpointTest extends TestKitSupport {
         .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
     Assertions.assertEquals(StatusCodes.OK, postResponse.status());
 
-    // Then the given participant should be retrievable through TimeSlot information
+    // Then the given participant should be retrievable through Timeslot information
     var getResponse = httpClient.GET("/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
     Assertions.assertEquals(StatusCodes.OK, getResponse.status());
     var actualTimeslot = getResponse.body();
     assertThat(actualTimeslot.available()).containsExactly(new Participant(studentId, ParticipantType.STUDENT));
+  }
+
+  @Test
+  public void unmarkAvailableUnmarksParticipantAvailabilityForSlotOverhttp() {
+    // Given a student participant with an availability within a slot
+    var postResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
+    Assertions.assertEquals(StatusCodes.OK, postResponse.status());
+
+    // When unmarking them as available
+    var deleteResponse = httpClient.DELETE("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
+
+    // Then the request is successful
+    Assertions.assertEquals(StatusCodes.OK, deleteResponse.status());
+
+    // And the given participant should no longer be retrievable through Timeslot
+    // information
+    var getResponse = httpClient.GET("/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
+    Assertions.assertEquals(StatusCodes.OK, getResponse.status());
+    var actualTimeslot = getResponse.body();
+    assertThat(actualTimeslot.available()).isEmpty();
   }
 }
