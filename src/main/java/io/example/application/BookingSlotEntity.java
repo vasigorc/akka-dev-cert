@@ -27,7 +27,9 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
   }
 
   public Effect<Done> markSlotAvailable(Command.MarkSlotAvailable cmd) {
-    return effects().error("not yet implemented");
+    return effects().persist(
+        new BookingEvent.ParticipantMarkedAvailable(entityId, cmd.participant.id(), cmd.participant.participantType()))
+        .thenReply(newState -> Done.getInstance());
   }
 
   public Effect<Done> unmarkSlotAvailable(Command.UnmarkSlotAvailable cmd) {
@@ -59,7 +61,7 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
   }
 
   public ReadOnlyEffect<Timeslot> getSlot() {
-    return effects().error("not yet implemented");
+    return effects().reply(currentState());
   }
 
   @Override
