@@ -8,4 +8,19 @@ public record Participant(String id, ParticipantType participantType) {
     INSTRUCTOR,
     AIRCRAFT
   }
+
+  public enum ParticipantAvailabilityStatus {
+    BOOKED("booked"),
+    AVAILABLE("available");
+
+    private final String value;
+
+    private ParticipantAvailabilityStatus(String value) {
+      this.value = value;
+    }
+
+    public String getValue() {
+      return value;
+    }
+  }
 }

@@ -1,5 +1,6 @@
 package io.example.api;
 
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Assertions;
@@ -11,9 +12,12 @@ import org.junit.jupiter.api.Test;
 
 import akka.http.javadsl.model.StatusCodes;
 import akka.javasdk.testkit.TestKitSupport;
-import io.example.api.FlightEndpoint.BookingRequest;
+import io.example.api.FlightEndpoint.*;
+import io.example.application.ParticipantSlotEntity;
+import io.example.application.ParticipantSlotsView.SlotList;
 import io.example.domain.Participant;
 import io.example.domain.Timeslot;
+import io.example.domain.Participant.ParticipantAvailabilityStatus;
 import io.example.domain.Participant.ParticipantType;
 
 public class FlightEndpointTest extends TestKitSupport {
@@ -21,7 +25,7 @@ public class FlightEndpointTest extends TestKitSupport {
   private final String testPilot = "test-pilot";
   private final String studentId = "sofia";
   private final String instructorId = "mr-reyes";
-  private final String aircraftId = "xb-abc";
+  private final String aircraftId = "cenizo";
   private String bookingId;
   private BookingRequest booking;
   private Timeslot.Booking expectedStudentBooking;
@@ -42,7 +46,18 @@ public class FlightEndpointTest extends TestKitSupport {
 
   @Test
   public void createBookingAddsReservationOverHttp() {
-    // Given a valid booking request
+    // Given available participants
+    var studentAvailableResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
+    var instructorAvailableResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
+    var aircraftAvailableResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(aircraftId, ParticipantType.AIRCRAFT.name())).invoke();
+    Set.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(response -> {
+      Assertions.assertEquals(StatusCodes.OK, response.status());
+    });
+
+    // And a valid booking request
 
     // When the booking is created via an HTTP request
     var putResponse = httpClient.PUT("/bookings/" + testPilot).withRequestBody(booking).invoke();
@@ -62,25 +77,64 @@ public class FlightEndpointTest extends TestKitSupport {
 
   @Test
   public void cancelBookingRemovesBookingsOverHttp() {
-    // Given an existing booking
-    var putResponse = httpClient.PUT("/bookings/" + testPilot).withRequestBody(booking).invoke();
+    // Given available participants
+    var studentAvailableResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
+    var instructorAvailableResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
+    var aircraftAvailableResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(aircraftId, ParticipantType.AIRCRAFT.name())).invoke();
+    Set.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(postResponse -> {
+      Assertions.assertEquals(StatusCodes.OK, postResponse.status());
+    });
+
+    // And an existing booking
+    httpClient.PUT("/bookings/" + testPilot).withRequestBody(booking).invoke();
 
     // When the booking is cancelled via an HTTP request
     var deleteResponse = httpClient.DELETE("/bookings/" + testPilot + "/" + bookingId).invoke();
 
-    // Then the request is successful and the slot state is updated correctly
+    // Then the request is successful
     Assertions.assertEquals(StatusCodes.OK, deleteResponse.status());
 
     var getResponse = httpClient.GET("/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
     Assertions.assertEquals(StatusCodes.OK, getResponse.status());
 
+    // And the slot state is updated correctly
     var timeslot = getResponse.body();
     assertThat(timeslot.available()).isEmpty();
     assertThat(timeslot.bookings()).isEmpty();
   }
 
   @Test
-  public void slotsByStatusReturnsAllSlotsForParticipantStatusCombinationOverHttp() {
-    fail();
+  public void slotsForAvailableStatusReturnsAllSlotsForSingleParticipantOverHttp() {
+    // Given the same available participant across two slots
+    String localFlight = "local-flight";
+    var instructorAvailableForTestPilotResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
+    var instructorAvailableForLocalFlightResponse = httpClient.POST("/availability/" + localFlight)
+        .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
+    Set.of(instructorAvailableForTestPilotResponse, instructorAvailableForLocalFlightResponse).forEach(postResponse -> {
+      Assertions.assertEquals(StatusCodes.OK, postResponse.status());
+    });
+
+    // When searching for availalable slots for the given instuctor
+    var getResponse = httpClient
+        .GET("/slots/" + instructorId + "/" + ParticipantAvailabilityStatus.AVAILABLE.getValue())
+        .responseBodyAs(SlotList.class).invoke();
+
+    // Then the request is successful
+    Assertions.assertEquals(StatusCodes.OK, getResponse.status());
+
+    var actualSlots = getResponse.body().slots();
+    // And the number of available slots should be two
+    assertThat(actualSlots).hasSize(2);
+
+    // And slot rows should match the participant's type, id and status
+    actualSlots.forEach(slotRow -> {
+      Assertions.assertEquals(ParticipantType.INSTRUCTOR.name(), slotRow.participantType());
+      Assertions.assertEquals(instructorId, slotRow.participantId());
+      Assertions.assertEquals(ParticipantAvailabilityStatus.AVAILABLE.getValue(), slotRow.status());
+    });
   }
 }
