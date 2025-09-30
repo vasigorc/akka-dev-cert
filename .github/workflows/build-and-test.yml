@@ -21,9 +21,13 @@ jobs:
             <profiles>
               <profile>
                 <id>akka</id>
-                <properties>
-                  <akka.token>${MAVEN_PASSWORD}</akka.token>
-                </properties>
+                <repositories>
+                  <repository>
+                    <id>akka-secure</id>
+                    <name>Akka Secure</name>
+                    <url>https://repo.akka.io/${MAVEN_PASSWORD}/secure</url>
+                  </repository>
+                </repositories>
               </profile>
             </profiles>
             <activeProfiles>

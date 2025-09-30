@@ -41,11 +41,11 @@
   <dependencies>
     <!-- Your dependencies go here -->
   </dependencies>
-  <repositories>
-    <repository>
-      <id>akka-secure</id>
-      <name>Akka Secure</name>
-      <url>https://repo.akka.io/${akka.token}/secure</url>
-    </repository>
-  </repositories>
+  <!-- <repositories> -->
+  <!--   <repository> -->
+  <!--     <id>akka-secure</id> -->
+  <!--     <name>Akka Secure</name> -->
+  <!--     <url>https://repo.akka.io/${akka.token}/secure</url> -->
+  <!--   </repository> -->
+  <!-- </repositories> -->
 </project>
