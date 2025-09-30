@@ -78,4 +78,9 @@ public class FlightEndpointTest extends TestKitSupport {
     assertThat(timeslot.available()).isEmpty();
     assertThat(timeslot.bookings()).isEmpty();
   }
+
+  @Test
+  public void slotsByStatusReturnsAllSlotsForParticipantStatusCombinationOverHttp() {
+    fail();
+  }
 }
