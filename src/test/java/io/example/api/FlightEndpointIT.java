@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Assertions;
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,14 +12,13 @@ import org.junit.jupiter.api.Test;
 import akka.http.javadsl.model.StatusCodes;
 import akka.javasdk.testkit.TestKitSupport;
 import io.example.api.FlightEndpoint.*;
-import io.example.application.ParticipantSlotEntity;
 import io.example.application.ParticipantSlotsView.SlotList;
 import io.example.domain.Participant;
 import io.example.domain.Timeslot;
 import io.example.domain.Participant.ParticipantAvailabilityStatus;
 import io.example.domain.Participant.ParticipantType;
 
-public class FlightEndpointTest extends TestKitSupport {
+public class FlightEndpointIT extends TestKitSupport {
 
   private final String testPilot = "test-pilot";
   private final String studentId = "sofia";
