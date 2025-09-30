@@ -10,17 +10,11 @@ public record Participant(String id, ParticipantType participantType) {
   }
 
   public enum ParticipantAvailabilityStatus {
-    BOOKED("booked"),
-    AVAILABLE("available");
-
-    private final String value;
-
-    private ParticipantAvailabilityStatus(String value) {
-      this.value = value;
-    }
+    BOOKED,
+    AVAILABLE;
 
     public String getValue() {
-      return value;
+      return this.name().toLowerCase();
     }
   }
 }

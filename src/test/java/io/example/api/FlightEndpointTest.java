@@ -137,4 +137,20 @@ public class FlightEndpointTest extends TestKitSupport {
       Assertions.assertEquals(ParticipantAvailabilityStatus.AVAILABLE.getValue(), slotRow.status());
     });
   }
+
+  @Test
+  public void markAvailableMarksParticipantAvailableForSlotOverHttp() {
+    // Given a student participant
+
+    // When marking them as available
+    var postResponse = httpClient.POST("/availability/" + testPilot)
+        .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
+    Assertions.assertEquals(StatusCodes.OK, postResponse.status());
+
+    // Then the given participant should be retrievable through TimeSlot information
+    var getResponse = httpClient.GET("/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
+    Assertions.assertEquals(StatusCodes.OK, getResponse.status());
+    var actualTimeslot = getResponse.body();
+    assertThat(actualTimeslot.available()).containsExactly(new Participant(studentId, ParticipantType.STUDENT));
+  }
 }
