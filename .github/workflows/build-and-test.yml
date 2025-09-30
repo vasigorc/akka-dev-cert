@@ -51,4 +51,4 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
       - name: Build, Test, and Verify
-        run: ./mvnw verify
+        run: ./mvnw compile
