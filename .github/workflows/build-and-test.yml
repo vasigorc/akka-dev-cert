@@ -2,7 +2,7 @@ name: Build, test and verify `akka-dev-cert`
 
 on:
   push:
-    branches: ["main"]
+    branches: ["**"]
 
 jobs:
   build:
