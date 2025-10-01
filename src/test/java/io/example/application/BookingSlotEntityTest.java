@@ -128,4 +128,35 @@ public class BookingSlotEntityTest {
     var state = testKit.getState();
     assertThat(state.available()).isEmpty();
   }
+
+  @Test
+  void testCancelBookingRemovesThreeBookings() {
+    var testKit = EventSourcedTestKit.of(BookingSlotEntity::new);
+
+    // Given three booked participants on a clean slate slot
+    testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(studentParticipant));
+    testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(instructorParticipant));
+    testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(aircraftParticipant));
+    var expectedBookingId = UUID.randomUUID().toString();
+    testKit.method(BookingSlotEntity::bookSlot).invoke(new Command.BookReservation(
+        studentParticipant.id(), aircraftParticipant.id(), instructorParticipant.id(), UUID.randomUUID().toString()));
+
+    // When cancelling the respective booking
+    var cancelBookingResult = testKit.method(BookingSlotEntity::cancelBooking).invoke(expectedBookingId);
+
+    // Then the command should succeed
+    Assertions.assertEquals(Done.getInstance(), cancelBookingResult.getReply());
+
+    // And the state shouldn't include any bookings
+    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
+    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
+    var state = testKit.getState();
+    assertThat(state.bookings()).isEmpty();
+
+    // And all participants are not automatically marked as available
+    assertThat(state.available()).isEmpty();
+  }
 }
