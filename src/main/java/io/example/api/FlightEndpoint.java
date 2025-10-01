@@ -19,6 +19,7 @@ import io.example.application.BookingSlotEntity;
 import io.example.application.BookingSlotEntity.Command;
 import io.example.application.ParticipantSlotsView.SlotList;
 import io.example.domain.Participant.ParticipantType;
+import io.example.domain.Participant;
 import io.example.domain.Timeslot;
 
 @Acl(allow = @Acl.Matcher(principal = Acl.Principal.INTERNET))
@@ -55,7 +56,10 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
   public HttpResponse cancelBooking(String slotId, String bookingId) {
     log.info("Canceling booking id {}", bookingId);
 
-    // Add booking cancellation code
+    componentClient
+        .forEventSourcedEntity(slotId)
+        .method(BookingSlotEntity::cancelBooking)
+        .invoke(bookingId);
 
     return HttpResponses.ok();
   }
@@ -74,10 +78,10 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
   @Get("/availability/{slotId}")
   public Timeslot getSlot(String slotId) {
 
-    // Add entity state request
-
-    return new Timeslot(Collections.emptySet(),
-        Collections.emptySet());
+    return componentClient
+        .forEventSourcedEntity(slotId)
+        .method(BookingSlotEntity::getSlot)
+        .invoke();
   }
 
   // Indicates that the supplied participant is available for booking
@@ -95,7 +99,10 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
 
     log.info("Marking timeslot available for entity {}", slotId);
 
-    // Add entity client to mark slot available
+    componentClient
+        .forEventSourcedEntity(slotId)
+        .method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(new Participant(request.participantId(), participantType)));
 
     return HttpResponses.ok();
   }
@@ -111,7 +118,10 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
       throw HttpException.badRequest("invalid participant type");
     }
 
-    // Add codce to unmark slot as available
+    componentClient
+        .forEventSourcedEntity(slotId)
+        .method(BookingSlotEntity::unmarkSlotAvailable)
+        .invoke(new Command.UnmarkSlotAvailable(new Participant(request.participantId(), participantType)));
 
     return HttpResponses.ok();
   }
