@@ -81,8 +81,6 @@ public class BookingSlotEntityTest {
 
     // And current state should include booking for all three participants
     // with the expected booking id
-    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
-    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
     var state = testKit.getState();
     var expectedParticipants = Set.of(studentParticipant, instructorParticipant, aircraftParticipant);
     assertThat(state.bookings()).hasSize(expectedParticipants.size());
@@ -103,8 +101,6 @@ public class BookingSlotEntityTest {
     Assertions.assertEquals(Done.getInstance(), aircraftAvailableResult.getReply());
 
     // Then current state should include this participant
-    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
-    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
     var state = testKit.getState();
     assertThat(state.available()).containsExactly(aircraftParticipant);
   }
@@ -123,8 +119,6 @@ public class BookingSlotEntityTest {
     Assertions.assertEquals(Done.getInstance(), unmarkSlotResult.getReply());
 
     // Then the current state should not include this participant
-    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
-    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
     var state = testKit.getState();
     assertThat(state.available()).isEmpty();
   }
@@ -142,7 +136,7 @@ public class BookingSlotEntityTest {
         .invoke(new Command.MarkSlotAvailable(aircraftParticipant));
     var expectedBookingId = UUID.randomUUID().toString();
     testKit.method(BookingSlotEntity::bookSlot).invoke(new Command.BookReservation(
-        studentParticipant.id(), aircraftParticipant.id(), instructorParticipant.id(), UUID.randomUUID().toString()));
+        studentParticipant.id(), aircraftParticipant.id(), instructorParticipant.id(), expectedBookingId));
 
     // When cancelling the respective booking
     var cancelBookingResult = testKit.method(BookingSlotEntity::cancelBooking).invoke(expectedBookingId);
@@ -151,8 +145,6 @@ public class BookingSlotEntityTest {
     Assertions.assertEquals(Done.getInstance(), cancelBookingResult.getReply());
 
     // And the state shouldn't include any bookings
-    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
-    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
     var state = testKit.getState();
     assertThat(state.bookings()).isEmpty();
 

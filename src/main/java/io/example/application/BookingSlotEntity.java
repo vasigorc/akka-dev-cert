@@ -10,8 +10,8 @@ import io.example.domain.Timeslot;
 import io.example.domain.Participant.ParticipantType;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +33,8 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
   }
 
   public Effect<Done> unmarkSlotAvailable(Command.UnmarkSlotAvailable cmd) {
-    return effects().error("not yet implemented");
+    return effects().persist(new BookingEvent.ParticipantUnmarkedAvailable(entityId, cmd.participant.id(),
+        cmd.participant.participantType())).thenReply(newState -> Done.getInstance());
   }
 
   // NOTE: booking a slot should produce 3
@@ -56,8 +57,13 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
   // NOTE: canceling a booking should produce 3
   // `ParticipantCanceled` events
   public Effect<Done> cancelBooking(String bookingId) {
-    return effects().error("not yet implemented");
-
+    logger.info("Cancelling booking {}", bookingId);
+    var cancelRelatedParticipantsEvents = currentState().findBooking(bookingId).stream()
+        .map(booking -> booking.participant())
+        .map(participant -> new BookingEvent.ParticipantCanceled(entityId, participant.id(),
+            participant.participantType(), bookingId))
+        .collect(Collectors.toList());
+    return effects().persistAll(cancelRelatedParticipantsEvents).thenReply(newState -> Done.getInstance());
   }
 
   public ReadOnlyEffect<Timeslot> getSlot() {
@@ -75,7 +81,7 @@ public class BookingSlotEntity extends EventSourcedEntity<Timeslot, BookingEvent
   public Timeslot applyEvent(BookingEvent event) {
     return switch (event) {
       case BookingEvent.ParticipantBooked booked -> currentState().book(booked);
-      case BookingEvent.ParticipantCanceled cancelled -> currentState().cancelBooking(cancelled.bookingId);
+      case BookingEvent.ParticipantCanceled cancelled -> currentState().cancelBooking(cancelled.bookingId());
       case BookingEvent.ParticipantMarkedAvailable participant -> currentState().reserve(participant);
       case BookingEvent.ParticipantUnmarkedAvailable participant -> currentState().unreserve(participant);
     };
