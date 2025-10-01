@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import akka.Done;
@@ -16,14 +17,27 @@ import io.example.domain.Participant.ParticipantType;
 import io.example.application.BookingSlotEntity.Command;
 
 public class BookingSlotEntityTest {
+
+  private final String studentId = "liam";
+  private final String instructorId = "mr-delgado";
+  private final String aircraftId = "piper-pa-28";
+  private Participant studentParticipant;
+  private Participant instructorParticipant;
+  private Participant aircraftParticipant;
+
+  @BeforeEach
+  void setUp() {
+    studentParticipant = new Participant(studentId, ParticipantType.STUDENT);
+    instructorParticipant = new Participant(instructorId, ParticipantType.INSTRUCTOR);
+    aircraftParticipant = new Participant(aircraftId, ParticipantType.AIRCRAFT);
+  }
+
   @Test
   void testFailToBookWithUnavailableParticipant() {
     var testKit = EventSourcedTestKit.of(BookingSlotEntity::new);
 
     // Given available student and instructor participants
     // And unavailable aircraft participatn
-    var studentParticipant = new Participant("liam", ParticipantType.STUDENT);
-    var instructorParticipant = new Participant("mr-delgado", ParticipantType.INSTRUCTOR);
     var studentAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
         .invoke(new Command.MarkSlotAvailable(studentParticipant));
     var instructorAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
@@ -44,10 +58,44 @@ public class BookingSlotEntityTest {
   }
 
   @Test
+  void testBookWhenRequestedParticipantsAreAvailable() {
+    var testKit = EventSourcedTestKit.of(BookingSlotEntity::new);
+
+    // Given all available participants (student, instructor, and aircraft)
+    var studentAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(studentParticipant));
+    var instructorAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(instructorParticipant));
+    var aircraftAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(aircraftParticipant));
+    Set.of(studentAvailableResult, instructorAvailableResult, aircraftAvailableResult).forEach(result -> {
+      Assertions.assertEquals(Done.getInstance(), result.getReply());
+    });
+    // When booking a slot
+    var expectedBookingId = UUID.randomUUID().toString();
+    var bookingResult = testKit.method(BookingSlotEntity::bookSlot).invoke(new Command.BookReservation(
+        studentParticipant.id(), aircraftParticipant.id(), instructorParticipant.id(), expectedBookingId));
+
+    // Then the command should succeed
+    Assertions.assertEquals(Done.getInstance(), bookingResult.getReply());
+
+    // And current state should include booking for all three participants
+    // with the expected booking id
+    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
+    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
+    var state = testKit.getState();
+    var expectedParticipants = Set.of(studentParticipant, instructorParticipant, aircraftParticipant);
+    assertThat(state.bookings()).hasSize(expectedParticipants.size());
+    state.bookings().forEach(booking -> {
+      assertThat(expectedParticipants).contains(booking.participant());
+      Assertions.assertEquals(expectedBookingId, booking.bookingId());
+    });
+  }
+
+  @Test
   void testMarkSlotAvailable() {
     var testKit = EventSourcedTestKit.of(BookingSlotEntity::new);
     // Given a participant
-    var aircraftParticipant = new Participant("piper-pa-28", ParticipantType.AIRCRAFT);
 
     // When sending a command to mark slot available for it
     var aircraftAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
@@ -59,5 +107,25 @@ public class BookingSlotEntityTest {
     Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
     var state = testKit.getState();
     assertThat(state.available()).containsExactly(aircraftParticipant);
+  }
+
+  @Test
+  void testUnmarkSlotAvailable() {
+    var testKit = EventSourcedTestKit.of(BookingSlotEntity::new);
+    // Given an available participant
+    var studentAvailableResult = testKit.method(BookingSlotEntity::markSlotAvailable)
+        .invoke(new Command.MarkSlotAvailable(studentParticipant));
+    Assertions.assertEquals(Done.getInstance(), studentAvailableResult.getReply());
+
+    // When sendinga command to unmark slot available for them
+    var unmarkSlotResult = testKit.method(BookingSlotEntity::unmarkSlotAvailable)
+        .invoke(new Command.UnmarkSlotAvailable(studentParticipant));
+    Assertions.assertEquals(Done.getInstance(), unmarkSlotResult.getReply());
+
+    // Then the current state should not include this participant
+    var getStateResult = testKit.method(BookingSlotEntity::getSlot).invoke();
+    Assertions.assertEquals(Done.getInstance(), getStateResult.getReply());
+    var state = testKit.getState();
+    assertThat(state.available()).isEmpty();
   }
 }
