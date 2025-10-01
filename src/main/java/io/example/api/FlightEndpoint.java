@@ -1,6 +1,8 @@
 package io.example.api;
 
 import java.util.Collections;
+import java.util.EnumSet;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,8 +18,10 @@ import akka.javasdk.http.AbstractHttpEndpoint;
 import akka.javasdk.http.HttpException;
 import akka.javasdk.http.HttpResponses;
 import io.example.application.BookingSlotEntity;
+import io.example.application.ParticipantSlotsView;
 import io.example.application.BookingSlotEntity.Command;
 import io.example.application.ParticipantSlotsView.SlotList;
+import io.example.domain.Participant.ParticipantAvailabilityStatus;
 import io.example.domain.Participant.ParticipantType;
 import io.example.domain.Participant;
 import io.example.domain.Timeslot;
@@ -69,9 +73,17 @@ public class FlightEndpoint extends AbstractHttpEndpoint {
   @Get("/slots/{participantId}/{status}")
   public SlotList slotsByStatus(String participantId, String status) {
 
-    // Add view query
+    var validStatusOptions = EnumSet.allOf(ParticipantAvailabilityStatus.class).stream().map(s -> s.getValue())
+        .collect(Collectors.toSet());
 
-    return new SlotList(Collections.emptyList());
+    if (!validStatusOptions.contains(status.trim().toLowerCase())) {
+      throw HttpException.badRequest(status + " is an invalid status");
+    }
+
+    return componentClient
+        .forView()
+        .method(ParticipantSlotsView::getSlotsByParticipantAndStatus)
+        .invoke(new ParticipantSlotsView.ParticipantStatusInput(participantId, status.trim().toLowerCase()));
   }
 
   // Returns the internal availability state for a given slot
