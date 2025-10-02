@@ -7,6 +7,7 @@ import akka.javasdk.consumer.Consumer;
 import io.example.domain.BookingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.example.application.ParticipantSlotEntity.*;
 
 // This class is responsible for consuming events from the booking
 // slot entity and turning those into command calls on the
@@ -23,7 +24,30 @@ public class SlotToParticipantConsumer extends Consumer {
   }
 
   public Effect onEvent(BookingEvent event) {
-    // Supply your own implementation
+    switch (event) {
+      case BookingEvent.ParticipantBooked booked ->
+        client.forEventSourcedEntity(participantSlotId(event))
+            .method(ParticipantSlotEntity::book)
+            .invoke(new Commands.Book(booked.slotId(), booked.participantId(), booked.participantType(),
+                booked.bookingId()));
+      case BookingEvent.ParticipantCanceled cancelled ->
+        client.forEventSourcedEntity(participantSlotId(event))
+            .method(ParticipantSlotEntity::cancel)
+            .invoke(new Commands.Cancel(cancelled.slotId(), cancelled.participantId(), cancelled.participantType(),
+                cancelled.bookingId()));
+      case BookingEvent.ParticipantMarkedAvailable participant ->
+        client.forEventSourcedEntity(participantSlotId(event))
+            .method(ParticipantSlotEntity::markAvailable)
+            .invoke(new Commands.MarkAvailable(participant.slotId(), participant.participantId(),
+                participant.participantType()));
+      case BookingEvent.ParticipantUnmarkedAvailable participant ->
+        client.forEventSourcedEntity(participantSlotId(event))
+            .method(ParticipantSlotEntity::unmarkAvailable)
+            .invoke(new Commands.UnmarkAvailable(participant.slotId(), participant.participantId(),
+                participant.participantType()));
+    }
+    ;
+
     return effects().done();
   }
 
