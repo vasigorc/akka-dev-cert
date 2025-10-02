@@ -1,7 +1,5 @@
 package io.example.application;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.util.Set;
 import java.util.UUID;
 
