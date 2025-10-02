@@ -1,6 +1,6 @@
 package io.example.api;
 
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Assertions;
@@ -51,7 +51,7 @@ public class FlightEndpointIT extends TestKitSupport {
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
     var aircraftAvailableResponse = httpClient.POST("/availability/" + testPilot)
         .withRequestBody(new AvailabilityRequest(aircraftId, ParticipantType.AIRCRAFT.name())).invoke();
-    Set.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(response -> {
+    List.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(response -> {
       Assertions.assertEquals(StatusCodes.OK, response.status());
     });
 
@@ -82,7 +82,7 @@ public class FlightEndpointIT extends TestKitSupport {
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
     var aircraftAvailableResponse = httpClient.POST("/availability/" + testPilot)
         .withRequestBody(new AvailabilityRequest(aircraftId, ParticipantType.AIRCRAFT.name())).invoke();
-    Set.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(postResponse -> {
+    List.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(postResponse -> {
       Assertions.assertEquals(StatusCodes.OK, postResponse.status());
     });
 
@@ -112,9 +112,10 @@ public class FlightEndpointIT extends TestKitSupport {
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
     var instructorAvailableForLocalFlightResponse = httpClient.POST("/availability/" + localFlight)
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
-    Set.of(instructorAvailableForTestPilotResponse, instructorAvailableForLocalFlightResponse).forEach(postResponse -> {
-      Assertions.assertEquals(StatusCodes.OK, postResponse.status());
-    });
+    List.of(instructorAvailableForTestPilotResponse, instructorAvailableForLocalFlightResponse)
+        .forEach(postResponse -> {
+          Assertions.assertEquals(StatusCodes.OK, postResponse.status());
+        });
 
     // When searching for availalable slots for the given instuctor
     var getResponse = httpClient
