@@ -3,7 +3,9 @@ package io.example.application;
 import java.util.Set;
 import java.util.UUID;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import akka.Done;
 import akka.javasdk.testkit.EventSourcedTestKit;
@@ -58,13 +60,73 @@ public class ParticipantSlotEntityTest {
 
     // Then current state should point to the participant
     var state = testKit.getState();
-    Assertions.assertNull(state);
+    Assertions.assertEquals(slotId, state.slotId());
+    Assertions.assertEquals(studentParticipant.id(), state.participantId());
+    Assertions.assertEquals(studentParticipant.participantType(), state.participantType());
+    Assertions.assertEquals(ParticipantAvailabilityStatus.UNAVAILABLE.getValue(), state.status());
   }
 
   @Test
-  void testFailToBookWithUnavailableParticipant() {
+  void testMarkThenUnmarkThenMarSlotMakesSlotAvailable() {
+    var testKit = EventSourcedTestKit.of(ParticipantSlotEntity::new);
+    // Given an available participant slot
+    var participantAvailableResult = testKit.method(ParticipantSlotEntity::markAvailable)
+        .invoke(
+            new Commands.MarkAvailable(slotId, studentParticipant.id(), studentParticipant.participantType()));
+    // And that later became unavialble
+    var participantunMarkAvailableResult = testKit.method(ParticipantSlotEntity::unmarkAvailable)
+        .invoke(
+            new Commands.UnmarkAvailable(slotId, studentParticipant.id(),
+                studentParticipant.participantType()));
+    Set.of(participantAvailableResult, participantunMarkAvailableResult).forEach(result -> {
+      Assertions.assertEquals(Done.getInstance(), result.getReply());
+    });
+
+    // When sending a new command to mark slot available for them
+    participantAvailableResult = testKit.method(ParticipantSlotEntity::markAvailable)
+        .invoke(
+            new Commands.MarkAvailable(slotId, studentParticipant.id(), studentParticipant.participantType()));
+
+    // Then current state should point to the participant
+    Assertions.assertEquals(Done.getInstance(), participantAvailableResult.getReply());
+    var state = testKit.getState();
+    Assertions.assertEquals(slotId, state.slotId());
+    Assertions.assertEquals(studentParticipant.id(), state.participantId());
+    Assertions.assertEquals(studentParticipant.participantType(), state.participantType());
+    Assertions.assertEquals(ParticipantAvailabilityStatus.AVAILABLE.getValue(), state.status());
+  }
+
+  @Test
+  void testFailToBookWithEmptyState() {
+    var testKit = EventSourcedTestKit.of(ParticipantSlotEntity::new);
+    // Given an uninitianized participant slot
+
+    // When sending a command to book
+    var bookResult = testKit.method(ParticipantSlotEntity::book)
+        .invoke(
+            new Commands.Book(slotId, studentParticipant.id(),
+                studentParticipant.participantType(), UUID.randomUUID().toString()));
+
+    // Then the result should be an error
+    Assertions.assertTrue(bookResult.isError());
+    Assertions.assertEquals("Requested participant is not available", bookResult.getError());
+  }
+
+  @Test
+  void testFailToBookWithUnavailableStatus() {
     var testKit = EventSourcedTestKit.of(ParticipantSlotEntity::new);
     // Given an unavailable slot participant
+    var participantMarkAvailableResult = testKit.method(ParticipantSlotEntity::markAvailable)
+        .invoke(
+            new Commands.MarkAvailable(slotId, studentParticipant.id(), studentParticipant.participantType()));
+
+    var paricipantUnmarkAvailableResult = testKit.method(ParticipantSlotEntity::unmarkAvailable)
+        .invoke(
+            new Commands.UnmarkAvailable(slotId, studentParticipant.id(),
+                studentParticipant.participantType()));
+    Set.of(participantMarkAvailableResult, paricipantUnmarkAvailableResult).forEach(result -> {
+      Assertions.assertEquals(Done.getInstance(), result.getReply());
+    });
 
     // When sending a command to book
     var bookResult = testKit.method(ParticipantSlotEntity::book)

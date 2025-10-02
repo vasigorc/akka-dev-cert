@@ -11,7 +11,8 @@ public record Participant(String id, ParticipantType participantType) {
 
   public enum ParticipantAvailabilityStatus {
     BOOKED,
-    AVAILABLE;
+    AVAILABLE,
+    UNAVAILABLE;
 
     public String getValue() {
       return this.name().toLowerCase();

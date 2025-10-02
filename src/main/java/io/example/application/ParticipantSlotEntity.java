@@ -28,11 +28,11 @@ public class ParticipantSlotEntity
         currentState().slotId());
     return effects()
         .persist(new Event.UnmarkedAvailable(unmark.slotId(), unmark.participantId(), unmark.participantType()))
-        .thenReply(Done.done());
+        .thenReply(newState -> Done.getInstance());
   }
 
   public Effect<Done> markAvailable(ParticipantSlotEntity.Commands.MarkAvailable mark) {
-    if (currentState() == null) {
+    if (isUnavailable()) {
       return effects().persist(new Event.MarkedAvailable(mark.slotId(), mark.participantId(), mark.participantType()))
           .thenReply(newState -> Done.getInstance());
     }
@@ -43,7 +43,7 @@ public class ParticipantSlotEntity
   }
 
   public Effect<Done> book(ParticipantSlotEntity.Commands.Book book) {
-    if (currentState() == null) {
+    if (isUnavailable()) {
       return effects().error("Requested participant is not available");
     }
 
@@ -56,8 +56,13 @@ public class ParticipantSlotEntity
         .thenReply(newState -> Done.getInstance());
   }
 
+  private boolean isUnavailable() {
+    return currentState() == null
+        || ParticipantAvailabilityStatus.UNAVAILABLE.getValue().equalsIgnoreCase(currentState().status());
+  }
+
   public Effect<Done> cancel(ParticipantSlotEntity.Commands.Cancel cancel) {
-    if (currentState() == null) {
+    if (isUnavailable()) {
       return effects().error("Failed to cancel unavailable participant slot");
     }
 
@@ -129,7 +134,8 @@ public class ParticipantSlotEntity
       case Event.MarkedAvailable marked -> new State(
           marked.slotId(), marked.participantId(), marked.participantType(),
           ParticipantAvailabilityStatus.AVAILABLE.getValue());
-      case Event.UnmarkedAvailable unmarked -> null;
+      case Event.UnmarkedAvailable unmarked ->
+        currentState().withStatus(ParticipantAvailabilityStatus.UNAVAILABLE.getValue());
       case Event.Booked booked -> currentState().withStatus(ParticipantAvailabilityStatus.BOOKED.getValue());
       case Event.Canceled canceled -> currentState().withStatus(ParticipantAvailabilityStatus.AVAILABLE.getValue());
     };
