@@ -17,10 +17,13 @@ import io.example.domain.Participant;
 import io.example.domain.Timeslot;
 import io.example.domain.Participant.ParticipantAvailabilityStatus;
 import io.example.domain.Participant.ParticipantType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FlightEndpointIT extends TestKitSupport {
 
-  private final String testPilot = "test-pilot";
+  private static final Logger logger = LoggerFactory.getLogger(FlightEndpointIT.class);
+  private String slotId;
   private final String studentId = "sofia";
   private final String instructorId = "mr-reyes";
   private final String aircraftId = "cenizo";
@@ -32,6 +35,7 @@ public class FlightEndpointIT extends TestKitSupport {
 
   @BeforeEach
   void setUp() {
+    slotId = UUID.randomUUID().toString();
     bookingId = UUID.randomUUID().toString();
     booking = new BookingRequest(studentId, aircraftId, instructorId, bookingId);
     var expectedStudent = new Participant(studentId, ParticipantType.STUDENT);
@@ -45,11 +49,11 @@ public class FlightEndpointIT extends TestKitSupport {
   @Test
   public void createBookingAddsReservationOverHttp() {
     // Given available participants
-    var studentAvailableResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var studentAvailableResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
-    var instructorAvailableResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var instructorAvailableResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
-    var aircraftAvailableResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var aircraftAvailableResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(aircraftId, ParticipantType.AIRCRAFT.name())).invoke();
     List.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(response -> {
       Assertions.assertEquals(StatusCodes.OK, response.status());
@@ -58,12 +62,12 @@ public class FlightEndpointIT extends TestKitSupport {
     // And a valid booking request
 
     // When the booking is created via an HTTP request
-    var putResponse = httpClient.POST("/flight/bookings/" + testPilot).withRequestBody(booking).invoke();
+    var putResponse = httpClient.POST("/flight/bookings/" + slotId).withRequestBody(booking).invoke();
 
     // Then the request is successful and the slot state is updated correctly
     Assertions.assertEquals(StatusCodes.CREATED, putResponse.status());
 
-    var getResponse = httpClient.GET("/flight/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
+    var getResponse = httpClient.GET("/flight/availability/" + slotId).responseBodyAs(Timeslot.class).invoke();
     Assertions.assertEquals(StatusCodes.OK, getResponse.status());
 
     var timeslot = getResponse.body();
@@ -76,26 +80,27 @@ public class FlightEndpointIT extends TestKitSupport {
   @Test
   public void cancelBookingRemovesBookingsOverHttp() {
     // Given available participants
-    var studentAvailableResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var studentAvailableResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
-    var instructorAvailableResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var instructorAvailableResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
-    var aircraftAvailableResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var aircraftAvailableResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(aircraftId, ParticipantType.AIRCRAFT.name())).invoke();
     List.of(studentAvailableResponse, instructorAvailableResponse, aircraftAvailableResponse).forEach(postResponse -> {
       Assertions.assertEquals(StatusCodes.OK, postResponse.status());
     });
 
     // And an existing booking
-    httpClient.POST("/flight/bookings/" + testPilot).withRequestBody(booking).invoke();
+    var postResponse = httpClient.POST("/flight/bookings/" + slotId).withRequestBody(booking).invoke();
+    Assertions.assertEquals(StatusCodes.CREATED, postResponse.status());
 
     // When the booking is cancelled via an HTTP request
-    var deleteResponse = httpClient.DELETE("/flight/bookings/" + testPilot + "/" + bookingId).invoke();
+    var deleteResponse = httpClient.DELETE("/flight/bookings/" + slotId + "/" + bookingId).invoke();
 
     // Then the request is successful
     Assertions.assertEquals(StatusCodes.OK, deleteResponse.status());
 
-    var getResponse = httpClient.GET("/flight/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
+    var getResponse = httpClient.GET("/flight/availability/" + slotId).responseBodyAs(Timeslot.class).invoke();
     Assertions.assertEquals(StatusCodes.OK, getResponse.status());
 
     // And the slot state is updated correctly
@@ -108,7 +113,7 @@ public class FlightEndpointIT extends TestKitSupport {
   public void slotsForAvailableStatusReturnsAllSlotsForSingleParticipantOverHttp() {
     // Given the same available participant across two slots
     String localFlight = "local-flight";
-    var instructorAvailableForTestPilotResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var instructorAvailableForTestPilotResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
     var instructorAvailableForLocalFlightResponse = httpClient.POST("/flight/availability/" + localFlight)
         .withRequestBody(new AvailabilityRequest(instructorId, ParticipantType.INSTRUCTOR.name())).invoke();
@@ -142,12 +147,12 @@ public class FlightEndpointIT extends TestKitSupport {
     // Given a student participant
 
     // When marking them as available
-    var postResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var postResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
     Assertions.assertEquals(StatusCodes.OK, postResponse.status());
 
     // Then the given participant should be retrievable through Timeslot information
-    var getResponse = httpClient.GET("/flight/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
+    var getResponse = httpClient.GET("/flight/availability/" + slotId).responseBodyAs(Timeslot.class).invoke();
     Assertions.assertEquals(StatusCodes.OK, getResponse.status());
     var actualTimeslot = getResponse.body();
     assertThat(actualTimeslot.available()).containsExactly(new Participant(studentId, ParticipantType.STUDENT));
@@ -156,12 +161,12 @@ public class FlightEndpointIT extends TestKitSupport {
   @Test
   public void unmarkAvailableUnmarksParticipantAvailabilityForSlotOverhttp() {
     // Given a student participant with an availability within a slot
-    var postResponse = httpClient.POST("/flight/availability/" + testPilot)
+    var postResponse = httpClient.POST("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
     Assertions.assertEquals(StatusCodes.OK, postResponse.status());
 
     // When unmarking them as available
-    var deleteResponse = httpClient.DELETE("/flight/availability/" + testPilot)
+    var deleteResponse = httpClient.DELETE("/flight/availability/" + slotId)
         .withRequestBody(new AvailabilityRequest(studentId, ParticipantType.STUDENT.name())).invoke();
 
     // Then the request is successful
@@ -169,7 +174,7 @@ public class FlightEndpointIT extends TestKitSupport {
 
     // And the given participant should no longer be retrievable through Timeslot
     // information
-    var getResponse = httpClient.GET("/flight/availability/" + testPilot).responseBodyAs(Timeslot.class).invoke();
+    var getResponse = httpClient.GET("/flight/availability/" + slotId).responseBodyAs(Timeslot.class).invoke();
     Assertions.assertEquals(StatusCodes.OK, getResponse.status());
     var actualTimeslot = getResponse.body();
     assertThat(actualTimeslot.available()).isEmpty();
