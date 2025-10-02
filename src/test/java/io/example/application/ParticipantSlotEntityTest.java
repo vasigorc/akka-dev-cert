@@ -101,7 +101,7 @@ public class ParticipantSlotEntityTest {
 
     // Then the result should be an error
     Assertions.assertTrue(secondBookResult.isError());
-    Assertions.assertEquals("Requested participant is already booked for the given slot", bookResult.getError());
+    Assertions.assertEquals("Requested participant is already booked for the given slot", secondBookResult.getError());
   }
 
   @Test
@@ -192,6 +192,7 @@ public class ParticipantSlotEntityTest {
     Assertions.assertEquals(Done.getInstance(), cancelResult.getReply());
 
     // And the state should be updated accordingly
-    Assertions.assertNull(testKit.getState());
+    var state = testKit.getState();
+    Assertions.assertEquals(ParticipantAvailabilityStatus.AVAILABLE.getValue(), state.status());
   }
 }
