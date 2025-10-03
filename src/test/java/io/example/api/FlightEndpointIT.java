@@ -2,7 +2,9 @@ package io.example.api;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import static org.assertj.core.api.Assertions.*;
 
@@ -17,12 +19,9 @@ import io.example.domain.Participant;
 import io.example.domain.Timeslot;
 import io.example.domain.Participant.ParticipantAvailabilityStatus;
 import io.example.domain.Participant.ParticipantType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class FlightEndpointIT extends TestKitSupport {
 
-  private static final Logger logger = LoggerFactory.getLogger(FlightEndpointIT.class);
   private String slotId;
   private final String studentId = "sofia";
   private final String instructorId = "mr-reyes";
@@ -122,24 +121,28 @@ public class FlightEndpointIT extends TestKitSupport {
           Assertions.assertEquals(StatusCodes.OK, postResponse.status());
         });
 
-    // When searching for availalable slots for the given instuctor
-    var getResponse = httpClient
-        .GET("/flight/slots/" + instructorId + "/" + ParticipantAvailabilityStatus.AVAILABLE.getValue())
-        .responseBodyAs(SlotList.class).invoke();
+    Awaitility.await()
+        .ignoreExceptions()
+        .atMost(10, TimeUnit.SECONDS)
+        .untilAsserted(() -> {
+          // When searching for availalable slots for the given instuctor
+          var getResponse = httpClient
+              .GET("/flight/slots/" + instructorId + "/" + ParticipantAvailabilityStatus.AVAILABLE.getValue())
+              .responseBodyAs(SlotList.class).invoke();
 
-    // Then the request is successful
-    Assertions.assertEquals(StatusCodes.OK, getResponse.status());
+          Assertions.assertEquals(StatusCodes.OK, getResponse.status());
 
-    var actualSlots = getResponse.body().slots();
-    // And the number of available slots should be two
-    assertThat(actualSlots).hasSize(2);
+          var actualSlots = getResponse.body().slots();
+          // And the number of available slots should be two
+          assertThat(actualSlots).hasSize(2);
 
-    // And slot rows should match the participant's type, id and status
-    actualSlots.forEach(slotRow -> {
-      Assertions.assertEquals(ParticipantType.INSTRUCTOR.name(), slotRow.participantType());
-      Assertions.assertEquals(instructorId, slotRow.participantId());
-      Assertions.assertEquals(ParticipantAvailabilityStatus.AVAILABLE.getValue(), slotRow.status());
-    });
+          // And slot rows should match the participant's type, id and status
+          actualSlots.forEach(slotRow -> {
+            Assertions.assertEquals(ParticipantType.INSTRUCTOR.name(), slotRow.participantType());
+            Assertions.assertEquals(instructorId, slotRow.participantId());
+            Assertions.assertEquals(ParticipantAvailabilityStatus.AVAILABLE.getValue(), slotRow.status());
+          });
+        });
   }
 
   @Test
