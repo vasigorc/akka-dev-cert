@@ -9,6 +9,7 @@ import io.example.application.ParticipantSlotEntity.Event;
 import io.example.domain.Participant.ParticipantAvailabilityStatus;
 
 import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +25,7 @@ public class ParticipantSlotsView extends View {
       return switch (event) {
         case Event.MarkedAvailable marked ->
           effects().updateRow(new SlotRow(marked.slotId(), marked.participantId(), marked.participantType().name(),
-              rowState().bookingId(), ParticipantAvailabilityStatus.AVAILABLE.getValue()));
+              "", ParticipantAvailabilityStatus.AVAILABLE.getValue()));
         case Event.UnmarkedAvailable unmarked ->
           effects()
               .updateRow(new SlotRow(unmarked.slotId(), unmarked.participantId(), unmarked.participantType().name(),

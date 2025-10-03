@@ -1,7 +1,5 @@
 package io.example.application;
 
-import java.util.Objects;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,14 +16,12 @@ public class ParticipantSlotEntity
   private static final Logger logger = LoggerFactory.getLogger(ParticipantSlotEntity.class);
 
   public Effect<Done> unmarkAvailable(ParticipantSlotEntity.Commands.UnmarkAvailable unmark) {
-    if (currentState() == null) {
-      logger.warn("Command to unmark unavailable participant {} for slot {} skipped",
+    if (isUnavailable()) {
+      logger.warn("Command to unmark available participant {} for slot {} skipped",
           unmark.participantId(), unmark.slotId());
       return effects().reply(Done.done());
     }
 
-    logger.info("Unmarking availability for participant {} and slot {}", currentState().participantId(),
-        currentState().slotId());
     return effects()
         .persist(new Event.UnmarkedAvailable(unmark.slotId(), unmark.participantId(), unmark.participantType()))
         .thenReply(newState -> Done.getInstance());
