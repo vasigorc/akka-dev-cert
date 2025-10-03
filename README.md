@@ -29,9 +29,9 @@ Then, clone this template repository, which contains:
 
 Your task is to implement the following Akka SDK components:
 
-- [ ] Flights [endpoint](https://doc.akka.io/java/http-endpoints.html)
+- [x] Flights [endpoint](https://doc.akka.io/java/http-endpoints.html)
 - [x] BookingSlot [entity](https://doc.akka.io/java/event-sourced-entities.html)
-- [ ] ParticipantSlots [view](https://doc.akka.io/java/views.html)
+- [x] ParticipantSlots [view](https://doc.akka.io/java/views.html)
 
 ### Implementation Guidelines
 
