@@ -256,13 +256,9 @@ You'll see something like this in the service's log:
 12:49:38.614 INFO  i.e.a.SlotToParticipantConsumer - Canceling booking booking4 for participant alice
 ```
 
-<<<<<<< HEAD
 The `Timeslot` which is the internal state of the Booking Slot Entity; should now be empty (no availability, no bookings)
-=======
 
 The timeslot entity should now be empty (no availability, no bookings):
-
-> > > > > > > be33718 (docs: Added checkboxes next to assignment tasks)
 
 ```
 curl -H "Content-Type: application/json" localhost:9000/flight/availability/bestslot
